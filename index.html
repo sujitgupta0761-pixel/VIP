@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="hi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wingo Firebase Cloud - Multi-Pattern V18.8</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase App & Realtime Database SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        @keyframes characterGlow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 12px rgba(16, 185, 129, 0.6)); }
+            50% { transform: scale(1.06); filter: drop-shadow(0 0 22px rgba(52, 211, 153, 0.9)); }
+        }
+        .bot-character-icon {
+            animation: characterGlow 2s infinite ease-in-out;
+        }
+
+        @keyframes borderPulse {
+            0%, 100% { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
+            50% { border-color: rgba(52, 211, 153, 0.8); box-shadow: 0 0 25px rgba(52, 211, 153, 0.4); }
+        }
+        .main-hero-box {
+            animation: borderPulse 3s infinite ease-in-out;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- 🔒 मुख्य लॉगिन स्क्रीन -->
+    <div id="app-lock-screen" class="fixed inset-0 bg-slate-950/95 z-[999] flex items-center justify-center p-4">
+        <div class="glass-panel border border-emerald-500/30 rounded-3xl p-7 w-full max-w-sm shadow-[0_0_50px_rgba(16,185,129,0.25)] space-y-5 text-center relative">
+            
+            <div class="w-16 h-16 bg-slate-950 border border-emerald-500/50 rounded-2xl flex items-center justify-center mx-auto text-emerald-400 text-2xl shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                <i class="fa-solid fa-bolt animate-pulse"></i>
+            </div>
+
+            <div>
+                <h2 class="text-xl font-extrabold text-white tracking-wide">Wingo Firebase Cloud</h2>
+                <div class="inline-flex items-center gap-1.5 mt-2 bg-emerald-950/80 border border-emerald-500/40 px-3 py-1 rounded-full text-emerald-300 text-xs font-bold shadow-inner">
+                    <i class="fa-solid fa-user-shield text-[10px]"></i> Jivachh Gupta
+                </div>
+                <p class="text-[11px] text-slate-400 mt-2">प्रवेश के लिए अपना अधिकृत पासकोर्ड दर्ज करें</p>
+            </div>
+
+            <div class="space-y-3.5 text-left">
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 text-xs">
+                        <i class="fa-solid fa-key"></i>
+                    </span>
+                    <input type="password" id="app-login-password" class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono tracking-widest shadow-inner transition" placeholder="अपना पासकोर्ड दर्ज करें..." onkeydown="if(event.key === 'Enter') unlockApp()">
+                </div>
+
+                <button type="button" onclick="unlockApp()" class="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-slate-950 text-xs font-black py-3 rounded-xl transition shadow-[0_4px_20px_rgba(16,185,129,0.4)] flex items-center justify-center gap-2 cursor-pointer">
+                    <span>सुरक्षित लॉगिन करें</span>
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                </button>
+
+                <div class="pt-2 border-t border-slate-800">
+                    <button type="button" onclick="openMasterAdminPanelFromLogin(event)" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-300 border border-emerald-500/20 text-[11px] font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 shadow-inner cursor-pointer">
+                        <i class="fa-solid fa-user-gear text-amber-400"></i>
+                        <span>मास्टर एडमिन पैनल (Admin Panel)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Unlock Top Banner -->
+    <div id="voice-banner" onclick="forceUnlockAudio(event)" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold py-2 px-3 text-center cursor-pointer flex items-center justify-center gap-2 shadow-md sticky top-0 z-50">
+        <i class="fa-solid fa-volume-high animate-bounce"></i>
+        <span>ऑडियो और सिंक चालू करने के लिए यहाँ क्लिक करें</span>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-7 z-40 px-3 py-3 shadow-md">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2.5">
+                <div onclick="document.getElementById('image-upload-input').click()" class="relative w-11 h-11 rounded-full overflow-hidden border-2 border-emerald-500 shadow-xl flex-shrink-0 bg-slate-800 flex items-center justify-center cursor-pointer group" title="फोटो बदलें">
+                    <img id="user-real-avatar" src="" alt="User" class="w-full h-full object-cover hidden">
+                    <div id="avatar-placeholder" class="w-full h-full bg-emerald-950 flex flex-col items-center justify-center text-emerald-300 text-[9px] font-bold text-center">
+                        <i class="fa-solid fa-camera text-xs mb-0.5"></i>
+                        <span>फोटो</span>
+                    </div>
+                </div>
+                <input type="file" id="image-upload-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+
+                <div>
+                    <h1 class="font-bold text-sm leading-tight tracking-wide text-slate-100">Multi-Pattern V18.8</h1>
+                    <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span id="connection-status" class="text-[10px] text-emerald-400 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Firebase Connected
+                        </span>
+                        <span class="text-[10px] text-amber-300 font-extrabold bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">Jivachh Gupta vip 😍</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header Controls -->
+            <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                <button type="button" onclick="promptAndToggleTelegram()" id="tg-toggle-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 text-[11px] px-2 py-1.5 rounded-lg font-bold transition shadow flex items-center gap-1 cursor-pointer">
+                    <i class="fa-brands fa-telegram text-sm"></i>
+                    <span>TG Auto: <strong id="tg-status-text" class="text-rose-400">OFF</strong></span>
+                </button>
+
+                <button type="button" onclick="promptAndToggleStats()" id="stats-toggle-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 text-[11px] px-2 py-1.5 rounded-lg font-bold transition shadow cursor-pointer">
+                    <i class="fa-solid fa-toggle-off text-sm"></i>
+                    <span>Stats TG: <strong id="stats-status-text" class="text-rose-400">OFF</strong></span>
+                </button>
+
+                <button type="button" onclick="sendManualWinStatsToTelegram(event)" class="bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 text-[11px] px-2.5 py-1.5 rounded-lg font-bold transition shadow flex items-center gap-1 cursor-pointer">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Send Stats</span>
+                </button>
+
+                <button type="button" onclick="toggleSound(event)" id="sound-toggle-btn" class="bg-amber-500 hover:bg-amber-400 text-slate-950 border border-amber-400 text-xs px-2.5 py-1.5 rounded-lg font-bold transition shadow cursor-pointer" title="Test Voice">
+                    <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+                </button>
+
+                <select id="api-selector" class="bg-slate-800 text-xs font-semibold text-slate-200 border border-slate-700 rounded-lg px-2 py-1.5 focus:outline-none focus:border-emerald-500 cursor-pointer">
+                    <option value="30S">30S</option>
+                    <option value="1M" selected>1M</option>
+                </select>
+
+                <button type="button" onclick="toggleAutoSync(event)" id="sync-toggle-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-2.5 py-1.5 rounded-lg font-medium transition shadow-md cursor-pointer">
+                    <i class="fa-solid fa-rotate mr-1"></i> Sync
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-4xl w-full mx-auto px-3 py-4 space-y-4 pb-20">
+
+        <!-- HERO DISPLAY BOX -->
+        <div class="main-hero-box bg-gradient-to-br from-slate-900 via-emerald-950/80 to-slate-900 border-2 rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden">
+            <div class="absolute -right-6 -bottom-6 text-emerald-500/10 text-9xl font-black pointer-events-none">
+                <i class="fa-solid fa-bolt"></i>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-10">
+                <div class="flex items-center gap-3.5">
+                    <div class="relative flex-shrink-0">
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-amber-400 p-0.5 shadow-lg flex items-center justify-center">
+                            <div class="w-full h-full bg-slate-950 rounded-[14px] flex flex-col items-center justify-center relative overflow-hidden">
+                                <i id="bot-character-avatar" class="fa-solid fa-bolt text-2xl sm:text-3xl text-emerald-400 bot-character-icon"></i>
+                                <span class="text-[8px] font-extrabold text-amber-300 uppercase tracking-tighter mt-0.5">V18.8</span>
+                            </div>
+                        </div>
+                        <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-slate-950 rounded-full animate-ping"></span>
+                        <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-slate-950 rounded-full"></span>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-xs font-black text-amber-400 tracking-wider uppercase flex items-center gap-1">
+                                <i class="fa-solid fa-layer-group"></i> 2/2, 2/1, 3/1 & Alternate Engine
+                            </span>
+                            <span id="tg-card-badge" class="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full font-semibold">
+                                <i class="fa-brands fa-telegram mr-1"></i>TG Auto: OFF
+                            </span>
+                            <span id="stats-card-badge" class="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full font-semibold">
+                                <i class="fa-solid fa-chart-bar mr-1"></i>Stats TG: OFF
+                            </span>
+                        </div>
+                        <div id="live-period-text" class="text-xs text-slate-400 mt-0.5 font-mono">वर्तमान पीरियड: --</div>
+                        <div id="next-call-display" class="mt-1.5 text-lg sm:text-xl font-black tracking-wide text-slate-100 flex items-center gap-2">
+                            <span>सिंक शुरू करने के लिए 'Sync' दबाएं...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-full sm:w-auto bg-slate-950/90 border border-emerald-500/30 rounded-xl px-5 py-3 text-center min-w-[125px] shadow-inner">
+                    <span class="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">लाइव टाइमर</span>
+                    <span id="countdown-timer" class="text-2xl font-black text-amber-400 font-mono tracking-widest drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]">--:--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 📊 ACTIVE ALGORITHM & LIVE SIGNAL TREND CARD -->
+        <div class="bg-slate-900/90 border border-emerald-500/20 rounded-xl p-3.5 shadow space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-bolt text-emerald-400 text-sm animate-pulse"></i>
+                    <div>
+                        <span class="text-slate-400 text-[10px] uppercase font-bold block">एक्टिव इंजन मोड (Added 2 by 2 Signal)</span>
+                        <span class="font-extrabold text-emerald-300">2/2, 2/1, 3/1, Zig-Zag & Dragon Active</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded font-mono font-bold">1000ms SPEED SYNC</span>
+                </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 flex-wrap text-[11px]">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-slate-400 font-semibold">Signal Status:</span>
+                    <span id="live-signal-status" class="font-extrabold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                        <i class="fa-solid fa-satellite-dish animate-pulse mr-1"></i> Waiting for Data
+                    </span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-slate-400 font-semibold">Active Engine:</span>
+                    <span id="live-current-trend" class="font-bold text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        <i class="fa-solid fa-layer-group mr-1"></i> Scanning All Patterns...
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- WIN / LOSS COUNTER DASHBOARD -->
+        <div class="grid grid-cols-4 gap-2 text-center">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow">
+                <span class="text-[10px] text-slate-400 font-bold uppercase block">Total Wins</span>
+                <span id="count-wins" class="text-lg font-black text-emerald-400">0</span>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow">
+                <span class="text-[10px] text-slate-400 font-bold uppercase block">Jackpots</span>
+                <span id="count-jackpots" class="text-lg font-black text-amber-400">0</span>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow">
+                <span class="text-[10px] text-slate-400 font-bold uppercase block">Total Loss</span>
+                <span id="count-losses" class="text-lg font-black text-rose-400">0</span>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow">
+                <span class="text-[10px] text-slate-400 font-bold uppercase block">Accuracy</span>
+                <span id="count-accuracy" class="text-lg font-black text-emerald-400">0%</span>
+            </div>
+        </div>
+
+        <!-- History Records Section -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
+            <div class="flex justify-between items-center">
+                <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-emerald-500"></i> लाइव रिकॉर्ड हिस्ट्री (History Records)
+                </h2>
+                <div class="flex gap-2">
+                    <button type="button" onclick="clearHistory()" class="text-xs text-rose-400 hover:text-rose-300 bg-rose-500/15 hover:bg-rose-500/25 px-3 py-1.5 rounded-lg transition border border-rose-500/30 font-medium cursor-pointer">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Clear All
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto max-h-[500px] overflow-y-auto border border-slate-800 rounded-lg">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-slate-950 text-slate-400 uppercase sticky top-0 border-b border-slate-800">
+                        <tr>
+                            <th class="p-3">Issue ID (Period)</th>
+                            <th class="p-3 text-center">Number</th>
+                            <th class="p-3">Actual Result</th>
+                            <th class="p-3">Status Counter</th>
+                            <th class="p-3">Time</th>
+                            <th class="p-3 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body" class="divide-y divide-slate-800/60">
+                    </tbody>
+                </table>
+            </div>
+            <div id="no-records" class="text-center py-6 text-slate-500 text-xs hidden">
+                कोई रिकॉर्ड उपलब्ध नहीं है। कृपया Sync चालू करें।
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 🛡️ मास्टर एडमिन माॅडल -->
+    <div id="master-admin-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[1000] flex items-center justify-center p-4 hidden">
+        <div class="glass-panel border border-emerald-500/40 rounded-3xl p-6 w-full max-w-lg shadow-[0_0_60px_rgba(16,185,129,0.2)] space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800/80 pb-3">
+                <h3 class="text-sm font-extrabold text-emerald-300 flex items-center gap-2 tracking-wide">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                        <i class="fa-solid fa-user-shield text-sm"></i>
+                    </div>
+                    <span>मास्टर एडमिन कंट्रोल पैनल</span>
+                </h3>
+                <button type="button" onclick="closeMasterAdminPanel()" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-xs">
+                <!-- Broadcast On/Off Switches -->
+                <div class="bg-slate-950/70 p-4 rounded-2xl border border-slate-800/80 space-y-3 shadow-inner">
+                    <span class="font-bold text-slate-200 block text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-sliders text-amber-400"></i> ब्रॉडकास्ट ऑन/ऑफ टॉगल (पासवर्ड सुरक्षित)
+                    </span>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div class="flex items-center justify-between bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                            <span class="text-slate-300 font-medium">Telegram Auto</span>
+                            <button type="button" id="admin-modal-tg-btn" onclick="promptAndToggleTelegram()" class="px-3 py-1 rounded-lg font-bold text-xs bg-rose-600 text-white transition shadow cursor-pointer">OFF</button>
+                        </div>
+                        <div class="flex items-center justify-between bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                            <span class="text-slate-300 font-medium">Stats Telegram</span>
+                            <button type="button" id="admin-modal-stats-btn" onclick="promptAndToggleStats()" class="px-3 py-1 rounded-lg font-bold text-xs bg-rose-600 text-white transition shadow cursor-pointer">OFF</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🔑 टेलीग्राम कंट्रोल पासवर्ड सेट करें -->
+                <div class="bg-slate-950/70 p-4 rounded-2xl border border-slate-800/80 space-y-2.5 shadow-inner">
+                    <span class="font-bold text-slate-200 block text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-key text-amber-400"></i> टेलीग्राम कंट्रोल पासवर्ड सेट करें (Telegram Pass)
+                    </span>
+                    <div class="flex gap-2">
+                        <input type="text" id="telegram-ctrl-pwd-input" class="flex-1 bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500" placeholder="नया टेलीग्राम पासवर्ड लिखें...">
+                        <button type="button" onclick="saveTelegramControlPassword()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2 rounded-xl transition shadow cursor-pointer">
+                            बदलें / सेव करें
+                        </button>
+                    </div>
+                    <span class="text-[10px] text-slate-400 block">वर्तमान पासवर्ड: <strong id="current-tg-pwd-display" class="text-amber-300 font-mono">Soni</strong></span>
+                </div>
+
+                <!-- 📲 एडमिन टेलीग्राम हैंडल सेटिंग्स -->
+                <div class="bg-slate-950/70 p-4 rounded-2xl border border-slate-800/80 space-y-2.5 shadow-inner">
+                    <span class="font-bold text-slate-200 block text-xs flex items-center gap-1.5">
+                        <i class="fa-brands fa-telegram text-sky-400"></i> एडमिन टेलीग्राम हैंडल (जिससे संपर्क करें)
+                    </span>
+                    <div class="flex gap-2">
+                        <input type="text" id="telegram-handle-input" class="flex-1 bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500" placeholder="जैसे @VIPGUPTAA">
+                        <button type="button" onclick="saveTelegramHandle()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold px-3.5 py-2 rounded-xl transition shadow cursor-pointer">
+                            अपडेट करें
+                        </button>
+                    </div>
+                    <span class="text-[10px] text-slate-400 block">वर्तमान हैंडल: <strong id="current-tg-handle-display" class="text-sky-300 font-mono">@VIPGUPTAA</strong></span>
+                </div>
+
+                <!-- Add New User Password Control -->
+                <div class="bg-slate-950/70 p-4 rounded-2xl border border-slate-800/80 space-y-2.5 shadow-inner">
+                    <span class="font-bold text-slate-200 block text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-plus text-emerald-400"></i> नया यूज़र पासवर्ड जोड़ें (1 डिवाइस लॉक)
+                    </span>
+                    <div class="flex gap-2">
+                        <input type="text" id="new-user-pass-input" class="flex-1 bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500" placeholder="नया पासवर्ड लिखें (जैसे VIP123)...">
+                        <button type="button" onclick="addNewUserPassword()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2 rounded-xl transition shadow cursor-pointer">
+                            जोड़ें
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Active Single-Device Passwords List -->
+                <div class="bg-slate-950/70 p-4 rounded-2xl border border-slate-800/80 space-y-2.5 shadow-inner">
+                    <span class="font-bold text-slate-200 block text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-mobile-screen-button text-emerald-400"></i> एक्टिव पासवर्ड और डिवाइस लॉक लिस्ट
+                    </span>
+                    <div class="overflow-x-auto max-h-[220px] overflow-y-auto border border-slate-800/80 rounded-xl">
+                        <table class="w-full text-left text-[11px] text-slate-300">
+                            <thead class="bg-slate-900 text-slate-400 uppercase sticky top-0 border-b border-slate-800">
+                                <tr>
+                                    <th class="p-2.5">पासवर्ड</th>
+                                    <th class="p-2.5">डिवाइस स्टेटस</th>
+                                    <th class="p-2.5 text-center">एक्शन</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-passwords-list-tbody" class="divide-y divide-slate-800/60">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            databaseURL: "https://vipp-b3a35-default-rtdb.firebaseio.com/"
+        };
+
+        let rtdb = null;
+        let masterAdminPassword = "Soni"; 
+        let telegramControlPassword = "Soni"; 
+        let alertTelegramHandle = "@VIPGUPTAA";
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            rtdb = firebase.database();
+            document.getElementById('connection-status').innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Firebase Connected';
+        } catch(e) {
+            console.warn("RTDB initialization warning:", e);
+        }
+
+        function getDeviceUUID() {
+            let uuid = localStorage.getItem('wingo_device_uuid');
+            if(!uuid) {
+                uuid = 'DEV_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
+                localStorage.setItem('wingo_device_uuid', uuid);
+            }
+            return uuid;
+        }
+        const currentDeviceId = getDeviceUUID();
+
+        const TELEGRAM_BOT_TOKEN = "8615000301:AAGL-UQq6ZKjuaSkDm-fk15xBfz3Xw3BPD0";
+        const TELEGRAM_CHAT_ID = "-1003934563963";
+
+        const API_URLS = {
+            "30S": "https://draw.ar-lottery01.com/WinGo/WinGo_30S/GetHistoryIssuePage.json",
+            "1M": "https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json"
+        };
+
+        let records = JSON.parse(localStorage.getItem('wingo_simple_records') || '[]');
+        let autoSyncActive = false;
+        let telegramBroadcastActive = false; 
+        let statsBroadcastActive = false;    
+        let soundEnabled = true;
+        let audioCtx = null; 
+        let syncInterval = null;
+        let timerInterval = null;
+        let currentLossLevel = 0; 
+        let lastBroadcastedPeriod = null;
+        let clearedPeriodIds = new Set(); 
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderHistoryTable();
+            updatePredictionAndTimer();
+            updateCounters();
+
+            if(rtdb) {
+                rtdb.ref('admin_password').on('value', (snapshot) => {
+                    const pwdVal = snapshot.val();
+                    if(pwdVal) masterAdminPassword = pwdVal;
+                });
+
+                rtdb.ref('telegram_ctrl_password').on('value', (snapshot) => {
+                    const tgPwdVal = snapshot.val();
+                    if(tgPwdVal) {
+                        telegramControlPassword = tgPwdVal;
+                        document.getElementById('current-tg-pwd-display').innerText = tgPwdVal;
+                    }
+                });
+
+                rtdb.ref('alert_telegram_handle').on('value', (snapshot) => {
+                    const handleVal = snapshot.val();
+                    if(handleVal) {
+                        alertTelegramHandle = handleVal;
+                        document.getElementById('current-tg-handle-display').innerText = handleVal;
+                    }
+                });
+            }
+
+            document.getElementById('api-selector').addEventListener('change', () => {
+                if(autoSyncActive) fetchApiData();
+                else updatePredictionAndTimer();
+            });
+        });
+
+        function saveTelegramControlPassword() {
+            let newPwd = document.getElementById('telegram-ctrl-pwd-input').value.trim();
+            if(!newPwd) {
+                alert('कृपया वैध पासवर्ड लिखें!');
+                return;
+            }
+
+            if(rtdb) {
+                rtdb.ref('telegram_ctrl_password').set(newPwd).then(() => {
+                    telegramControlPassword = newPwd;
+                    document.getElementById('current-tg-pwd-display').innerText = newPwd;
+                    document.getElementById('telegram-ctrl-pwd-input').value = '';
+                    alert('टेलीग्राम कंट्रोल पासवर्ड सफलतापूर्वक अपडेट कर दिया गया है!');
+                });
+            } else {
+                telegramControlPassword = newPwd;
+                document.getElementById('current-tg-pwd-display').innerText = newPwd;
+                document.getElementById('telegram-ctrl-pwd-input').value = '';
+                alert('पासवर्ड अपडेट हो गया है!');
+            }
+        }
+
+        function saveTelegramHandle() {
+            let newHandle = document.getElementById('telegram-handle-input').value.trim();
+            if(!newHandle) {
+                alert('कृपया वैध यूज़र आईडी लिखें!');
+                return;
+            }
+            if(!newHandle.startsWith('@')) newHandle = '@' + newHandle;
+
+            if(rtdb) {
+                rtdb.ref('alert_telegram_handle').set(newHandle).then(() => {
+                    alertTelegramHandle = newHandle;
+                    document.getElementById('current-tg-handle-display').innerText = newHandle;
+                    document.getElementById('telegram-handle-input').value = '';
+                    alert('टेलीग्राम हैंडल सफलतापूर्व अपडेट कर दिया गया है!');
+                });
+            } else {
+                alertTelegramHandle = newHandle;
+                document.getElementById('current-tg-handle-display').innerText = newHandle;
+                document.getElementById('telegram-handle-input').value = '';
+                alert('अपडेट हो गया है!');
+            }
+        }
+
+        function handleWrongPasswordEntered() {
+            alert(`⚠️ गलत पासवर्ड!\n\nपासवर्ड लेने के लिए हमारे टेलीग्राम एडमिन ${alertTelegramHandle} से संपर्क करें।`);
+            speakText("Wrong Password. Please contact admin.");
+        }
+
+        function unlockApp() {
+            const enteredPwd = document.getElementById('app-login-password').value.trim();
+            if(!enteredPwd) {
+                alert('कृपया पासकोर्ड दर्ज करें!');
+                return;
+            }
+
+            if(enteredPwd === masterAdminPassword) {
+                document.getElementById('app-lock-screen').classList.add('hidden');
+                speakText("Master Login Success");
+                return;
+            }
+
+            if(rtdb) {
+                rtdb.ref('user_passwords/' + enteredPwd).once('value', (snapshot) => {
+                    const passData = snapshot.val();
+                    if(!passData) {
+                        handleWrongPasswordEntered();
+                        return;
+                    }
+
+                    if(passData.status === 'OFF' || passData.status === 'DISABLED') {
+                        alert(`⚠️ यह पासकोर्ड मास्टर एडमिन द्वारा बंद (OFF) कर दिया गया है!\n\nपासवर्ड लेने के लिए हमारे टेलीग्राम एडमिन ${alertTelegramHandle} से संपर्क करें।`);
+                        speakText("Password is disabled");
+                        return;
+                    }
+
+                    if(passData.lockedDeviceId && passData.lockedDeviceId !== currentDeviceId) {
+                        alert(`⚠️ सुरक्षा अलर्ट: यह पासकोर्ड पहले से ही किसी अन्य मोबाइल में सक्रिय है!\n\nपासवर्ड लेने के लिए हमारे टेलीग्राम एडमिन ${alertTelegramHandle} से संपर्क करें।`);
+                        speakText("Password locked in another mobile");
+                        return;
+                    }
+
+                    if(!passData.lockedDeviceId) {
+                        rtdb.ref('user_passwords/' + enteredPwd).update({
+                            lockedDeviceId: currentDeviceId,
+                            boundTime: new Date().toLocaleString()
+                        });
+                    }
+
+                    document.getElementById('app-lock-screen').classList.add('hidden');
+                    speakText("Login Success");
+                });
+            } else {
+                alert('Firebase डेटाबेस कनेक्टेड नहीं है!');
+            }
+        }
+
+        function openMasterAdminPanelFromLogin(e) {
+            if(e) e.stopPropagation();
+            let pwd = prompt("मास्टर एडमिन पैनल खोलने के लिए पासकोर्ड दर्ज करें:");
+            if(pwd === masterAdminPassword) {
+                updateAdminModalButtonsUI();
+                loadUserPasswordsListAdmin();
+                document.getElementById('master-admin-modal').classList.remove('hidden');
+            } else if(pwd !== null) {
+                handleWrongPasswordEntered();
+            }
+        }
+
+        function closeMasterAdminPanel() {
+            document.getElementById('master-admin-modal').classList.add('hidden');
+        }
+
+        function addNewUserPassword() {
+            const pwd = document.getElementById('new-user-pass-input').value.trim();
+            if(!pwd) {
+                alert('कृपया वैध पासवर्ड लिखें!');
+                return;
+            }
+
+            if(rtdb) {
+                rtdb.ref('user_passwords/' + pwd).set({
+                    createdTime: new Date().toLocaleString(),
+                    lockedDeviceId: "",
+                    status: "ON"
+                }).then(() => {
+                    alert('नया पासवर्ड सफलतापूर्वक जोड़ दिया गया है!');
+                    document.getElementById('new-user-pass-input').value = '';
+                    loadUserPasswordsListAdmin();
+                });
+            }
+        }
+
+        function loadUserPasswordsListAdmin() {
+            const tbody = document.getElementById('user-passwords-list-tbody');
+            tbody.innerHTML = '<tr><td colspan="3" class="p-3 text-center text-slate-500">लोड हो रहा है...</td></tr>';
+
+            if(rtdb) {
+                rtdb.ref('user_passwords').once('value', (snapshot) => {
+                    tbody.innerHTML = '';
+                    const data = snapshot.val();
+                    if(!data) {
+                        tbody.innerHTML = '<tr><td colspan="3" class="p-3 text-center text-slate-500">कोई पासवर्ड नहीं है।</td></tr>';
+                        return;
+                    }
+
+                    Object.keys(data).forEach(passKey => {
+                        const item = data[passKey];
+                        const isLocked = item.lockedDeviceId ? true : false;
+                        const deviceStatusText = isLocked ? `<span class="text-rose-400 font-bold">🔒 locked (${item.lockedDeviceId.substring(0, 6)}...)</span>` : `<span class="text-emerald-400 font-bold">🔓 Open</span>`;
+
+                        const isPassActive = (item.status === undefined || item.status === 'ON');
+                        const statusToggleBtn = isPassActive
+                            ? `<button type="button" onclick="promptAndToggleUserPasswordStatus('${passKey}', 'OFF')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-0.5 rounded text-[10px] font-extrabold transition cursor-pointer">ON</button>`
+                            : `<button type="button" onclick="promptAndToggleUserPasswordStatus('${passKey}', 'ON')" class="bg-rose-600 hover:bg-rose-500 text-white px-2 py-0.5 rounded text-[10px] font-extrabold transition cursor-pointer">OFF</button>`;
+
+                        let tr = document.createElement('tr');
+                        tr.className = "hover:bg-slate-900 border-b border-slate-800/50";
+                        tr.innerHTML = `
+                            <td class="p-2 font-mono font-bold text-slate-200">${passKey}</td>
+                            <td class="p-2 text-[10px]">${deviceStatusText}</td>
+                            <td class="p-2 text-center flex items-center justify-center gap-1">
+                                ${statusToggleBtn}
+                                <button type="button" onclick="promptAndResetDeviceLock('${passKey}')" class="bg-amber-600 hover:bg-amber-500 text-white px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer">Reset Lock</button>
+                                <button type="button" onclick="promptAndDeletePassword('${passKey}')" class="bg-rose-600 hover:bg-rose-500 text-white p-1 rounded text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                });
+            }
+        }
+
+        function promptAndToggleUserPasswordStatus(passKey, newStatus) {
+            let pwd = prompt("पासवर्ड बदलने के लिए मास्टर एडमिन पासवर्ड दर्ज करें:");
+            if (pwd === masterAdminPassword) {
+                if(rtdb) {
+                    rtdb.ref('user_passwords/' + passKey).update({ status: newStatus }).then(() => {
+                        loadUserPasswordsListAdmin();
+                    });
+                }
+            } else if (pwd !== null) {
+                handleWrongPasswordEntered();
+            }
+        }
+
+        function promptAndResetDeviceLock(passKey) {
+            let pwd = prompt("डिवाइस लॉक रीसेट करने के लिए मास्टर एडमिन पासवर्ड दर्ज करें:");
+            if (pwd === masterAdminPassword) {
+                if(rtdb) {
+                    rtdb.ref('user_passwords/' + passKey).update({ lockedDeviceId: "" }).then(() => {
+                        alert('डिवाइस लॉक रिसेट कर दिया गया है!');
+                        loadUserPasswordsListAdmin();
+                    });
+                }
+            } else if (pwd !== null) {
+                handleWrongPasswordEntered();
+            }
+        }
+
+        function promptAndDeletePassword(passKey) {
+            let pwd = prompt("पासवर्ड डिलीट करने के लिए मास्टर एडमिन पासवर्ड दर्ज करें:");
+            if (pwd === masterAdminPassword) {
+                if(rtdb) {
+                    rtdb.ref('user_passwords/' + passKey).remove().then(() => {
+                        alert('पासवर्ड डिलीट कर दिया गया है!');
+                        loadUserPasswordsListAdmin();
+                    });
+                }
+            } else if (pwd !== null) {
+                handleWrongPasswordEntered();
+            }
+        }
+
+        function promptAndToggleTelegram() {
+            let pwd = prompt("Telegram Auto स्विच बदलने के लिए टेलीग्राम कंट्रोल पासवर्ड दर्ज करें:");
+            if (pwd === telegramControlPassword) {
+                toggleTelegramBroadcast();
+            } else if (pwd !== null) {
+                handleWrongPasswordEntered();
+            }
+        }
+
+        function promptAndToggleStats() {
+            let pwd = prompt("Stats Telegram स्विच बदलने के लिए टेलीग्राम कंट्रोल पासवर्ड दर्ज करें:");
+            if (pwd === telegramControlPassword) {
+                toggleStatsBroadcast();
+            } else if (pwd !== null) {
+                handleWrongPasswordEntered();
+            }
+        }
+
+        function toggleTelegramBroadcast(e) {
+            if(e) e.stopPropagation();
+            telegramBroadcastActive = !telegramBroadcastActive;
+            
+            const btn = document.getElementById('admin-modal-tg-btn');
+            const topTgBtn = document.getElementById('tg-toggle-btn');
+            const statusText = document.getElementById('tg-status-text');
+            const cardBadge = document.getElementById('tg-card-badge');
+
+            if(telegramBroadcastActive) {
+                btn.className = "px-3 py-1 rounded-lg font-bold text-xs bg-emerald-600 text-white transition shadow cursor-pointer";
+                btn.innerText = "ON";
+                topTgBtn.className = "bg-sky-600 hover:bg-sky-500 text-white border border-sky-400 text-[11px] px-2 py-1.5 rounded-lg font-bold transition shadow flex items-center gap-1 cursor-pointer";
+                statusText.innerText = "ON";
+                statusText.className = "text-amber-300 font-extrabold animate-pulse";
+                cardBadge.className = "text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-semibold";
+                cardBadge.innerHTML = `<i class="fa-brands fa-telegram mr-1"></i>TG Auto: ON`;
+                speakText("Telegram Auto Enabled");
+            } else {
+                btn.className = "px-3 py-1 rounded-lg font-bold text-xs bg-rose-600 text-white transition shadow cursor-pointer";
+                btn.innerText = "OFF";
+                topTgBtn.className = "bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 text-[11px] px-2 py-1.5 rounded-lg font-bold transition shadow flex items-center gap-1 cursor-pointer";
+                statusText.innerText = "OFF";
+                statusText.className = "text-rose-400";
+                cardBadge.className = "text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full font-semibold";
+                cardBadge.innerHTML = `<i class="fa-brands fa-telegram mr-1"></i>TG Auto: OFF`;
+                speakText("Telegram Auto Disabled");
+            }
+        }
+
+        function toggleStatsBroadcast(e) {
+            if(e) e.stopPropagation();
+            statsBroadcastActive = !statsBroadcastActive;
+
+            const btn = document.getElementById('admin-modal-stats-btn');
+            const topStatsBtn = document.getElementById('stats-toggle-btn');
+            const statusText = document.getElementById('stats-status-text');
+            const cardBadge = document.getElementById('stats-card-badge');
+
+            if(statsBroadcastActive) {
+                btn.className = "px-3 py-1 rounded-lg font-bold text-xs bg-emerald-600 text-white transition shadow cursor-pointer";
+                btn.innerText = "ON";
+                topStatsBtn.className = "bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 text-[11px] px-2 py-1.5 rounded-lg font-bold transition shadow flex items-center gap-1 cursor-pointer";
+                topStatsBtn.querySelector('i').className = "fa-solid fa-toggle-on text-sm text-amber-300";
+                statusText.innerText = "ON";
+                statusText.className = "text-amber-300 font-extrabold animate-pulse";
+                cardBadge.className = "text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-semibold";
+                cardBadge.innerHTML = `<i class="fa-solid fa-chart-bar mr-1"></i>Stats TG: ON`;
+                speakText("Stats Broadcast Enabled");
+            } else {
+                btn.className = "px-3 py-1 rounded-lg font-bold text-xs bg-rose-600 text-white transition shadow cursor-pointer";
+                btn.innerText = "OFF";
+                topStatsBtn.className = "bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 text-[11px] px-2 py-1.5 rounded-lg font-bold transition shadow cursor-pointer";
+                topStatsBtn.querySelector('i').className = "fa-solid fa-toggle-off text-sm text-slate-400";
+                statusText.innerText = "OFF";
+                statusText.className = "text-rose-400";
+                cardBadge.className = "text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full font-semibold";
+                cardBadge.innerHTML = `<i class="fa-solid fa-chart-bar mr-1"></i>Stats TG: OFF`;
+                speakText("Stats Broadcast Disabled");
+            }
+        }
+
+        function updateAdminModalButtonsUI() {
+            const tgBtn = document.getElementById('admin-modal-tg-btn');
+            const statsBtn = document.getElementById('admin-modal-stats-btn');
+
+            if(telegramBroadcastActive) {
+                tgBtn.className = "px-3 py-1 rounded-lg font-bold text-xs bg-emerald-600 text-white transition shadow cursor-pointer";
+                tgBtn.innerText = "ON";
+            } else {
+                tgBtn.className = "px-3 py-1 rounded-lg font-bold text-xs bg-rose-600 text-white transition shadow cursor-pointer";
+                tgBtn.innerText = "OFF";
+            }
+
+            if(statsBroadcastActive) {
+                statsBtn.className = "px-3 py-1 rounded-lg font-bold text-xs bg-emerald-600 text-white transition shadow cursor-pointer";
+                statsBtn.innerText = "ON";
+            } else {
+                statsBtn.className = "px-3 py-1 rounded-lg font-bold text-xs bg-rose-600 text-white transition shadow cursor-pointer";
+                statsBtn.innerText = "OFF";
+            }
+        }
+
+        function sendManualWinStatsToTelegram(e) {
+            if(e) e.stopPropagation();
+
+            if(!statsBroadcastActive) {
+                alert('कृपया पहले "Stats TG" स्विच को ON करें!');
+                speakText("Please Turn On Stats Switch First");
+                return;
+            }
+
+            let totalWins = 0;
+            let totalJackpots = 0;
+
+            records.forEach(r => {
+                if(r.matchStatus === 'WIN') totalWins++;
+                else if(r.matchStatus === 'JACKPOT') totalJackpots++;
+            });
+
+            let combinedWinningSuccess = totalWins + totalJackpots;
+
+            const statsMsg = `📊🔥 𝗪𝗜𝗡𝗡𝗜𝗡𝗚 𝗦𝗧𝗔𝗧𝗦 𝗥𝗘𝗣𝗢𝗥𝗧 🔥📊\n\n` +
+                             `👑 Total Jackpots: ${totalJackpots}\n` +
+                             `✅ Total Wins: ${totalWins}\n` +
+                             `🔥 Total Winning Success: ${combinedWinningSuccess}\n\n` +
+                             `📢 Channel: @VIPGUPTAA`;
+
+            if(!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+                alert('Telegram Bot Token या Chat ID सेट नहीं है!');
+                return;
+            }
+
+            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(statsMsg)}`;
+            
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.ok) {
+                        alert('रिपोर्ट सफलतापूर्वक भेज दी गई है!');
+                        speakText("Stats Sent Successfully");
+                    } else {
+                        alert('टेलीग्राम भेजने में त्रुटि हुई।');
+                    }
+                })
+                .catch(err => {
+                    console.error('Stats Send Error:', err);
+                    alert('नेटवर्क एरर!');
+                });
+        }
+
+        function forceUnlockAudio(e) {
+            if(e) e.stopPropagation();
+            
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if(AudioContext) {
+                if(!audioCtx) {
+                    audioCtx = new AudioContext();
+                } else if(audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            }
+
+            if('speechSynthesis' in window) {
+                window.speechSynthesis.resume();
+                const silentUtterance = new SpeechSynthesisUtterance('');
+                window.speechSynthesis.speak(silentUtterance);
+            }
+
+            const banner = document.getElementById('voice-banner');
+            if(banner) {
+                banner.className = "bg-emerald-600 text-white text-xs font-bold py-1 px-3 text-center transition";
+                banner.innerHTML = `<i class="fa-solid fa-circle-check"></i> साउंड और ऑटो-सिंक चालू है!`;
+                setTimeout(() => { banner.style.display = 'none'; }, 2000);
+            }
+
+            playBeep(600, 150); 
+        }
+
+        function playBeep(frequency = 580, duration = 200) {
+            if(!soundEnabled) return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if(!audioCtx) audioCtx = new AudioContext();
+                if(audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.value = frequency;
+
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + (duration / 1000));
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + (duration / 1000));
+            } catch(err) {
+                console.log("Audio Context Beep Error:", err);
+            }
+        }
+
+        function toggleSound(e) {
+            forceUnlockAudio(e);
+            speakText("Sound Test Successful");
+        }
+
+        function speakText(text) {
+            if(!soundEnabled) return;
+            playBeep(700, 100); 
+            
+            if('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.resume();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                utterance.rate = 1.0;
+                utterance.volume = 1.0;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function sendTelegramMessage(msgText) {
+            if(!telegramBroadcastActive) return;
+            if(!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msgText)}`;
+            fetch(url).catch(err => console.error('Telegram Send Error:', err));
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64String = e.target.result;
+                    localStorage.setItem('user_uploaded_real_photo', base64String);
+                    const imgEl = document.getElementById('user-real-avatar');
+                    imgEl.src = base64String;
+                    imgEl.classList.remove('hidden');
+                    document.getElementById('avatar-placeholder').style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function toggleAutoSync(e) {
+            forceUnlockAudio(e);
+            autoSyncActive = !autoSyncActive;
+            const btn = document.getElementById('sync-toggle-btn');
+            const statusEl = document.getElementById('connection-status');
+
+            if(autoSyncActive) {
+                btn.className = "bg-rose-600 hover:bg-rose-500 text-white text-xs px-2.5 py-1.5 rounded-lg font-medium transition shadow-md cursor-pointer";
+                btn.innerHTML = '<i class="fa-solid fa-stop mr-1"></i> Stop';
+                statusEl.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Multi-Pattern Active (1s)';
+                statusEl.className = "text-[10px] text-emerald-400 flex items-center gap-1";
+                
+                fetchApiData();
+                syncInterval = setInterval(fetchApiData, 1000); 
+            } else {
+                btn.className = "bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-2.5 py-1.5 rounded-lg font-medium transition shadow-md cursor-pointer";
+                btn.innerHTML = '<i class="fa-solid fa-rotate mr-1"></i> Sync';
+                statusEl.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Paused';
+                statusEl.className = "text-[10px] text-amber-400 flex items-center gap-1";
+                
+                if(syncInterval) clearInterval(syncInterval);
+            }
+        }
+
+        async function fetchApiData() {
+            const selectedType = document.getElementById('api-selector').value;
+            const targetUrl = API_URLS[selectedType];
+            const statusEl = document.getElementById('connection-status');
+
+            try {
+                const response = await fetch(targetUrl, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    cache: 'no-store'
+                });
+
+                if(!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const json = await response.json();
+                parseApiResponse(json, selectedType);
+
+                statusEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Synced (${selectedType})`;
+                statusEl.className = "text-[10px] text-emerald-400 flex items-center gap-1";
+
+            } catch (error) {
+                console.warn('Direct API fetch warning:', error);
+                statusEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Network Error`;
+                statusEl.className = "text-[10px] text-rose-400 flex items-center gap-1";
+            }
+        }
+
+        // 🚀 MULTI-PATTERN ENGINE V18.8 (2 by 2 Pattern Support Added)
+        function calculateAdvancedZeroLossPrediction(historyList) {
+            if (!historyList || historyList.length < 5) {
+                return { size: 'BIG', numbers: '7 8', level: 1, activeEngine: 'INITIAL PATTERN SCAN' };
+            }
+
+            let consecutiveLosses = 0;
+            for (let i = 0; i < historyList.length; i++) {
+                if (historyList[i].matchStatus === 'LOSS') {
+                    consecutiveLosses++;
+                } else {
+                    break;
+                }
+            }
+            let level = Math.min(consecutiveLosses + 1, 6);
+
+            let sizes = historyList.map(r => r.size);
+            let targetSize = null;
+            let activeEngineName = 'Master Multi-Pattern Engine';
+
+            // ⚡ 1. STRICT 2 BY 2 (2/2) PATTERN LOGIC
+            // उदाहरण: A A B B -> अगला A होगा (2 बाय 2 का ट्रेंड जारी रखने के लिए)
+            // उदाहरण 2: A B B -> अगला B होगा (2 बाय 2 का दूसरा पेयर पूरा करने के लिए)
+            if (sizes.length >= 4 && sizes[0] === sizes[1] && sizes[2] === sizes[3] && sizes[0] !== sizes[2]) {
+                targetSize = sizes[2]; // 2/2 ट्रेंड के अनुसार पिछला जोड़ा बदलकर नया जोड़ा चालू करता है
+                activeEngineName = `Strict 2/2 Pattern Match (${targetSize})`;
+            }
+            else if (sizes.length >= 3 && sizes[0] === sizes[1] && sizes[1] !== sizes[2] && (sizes.length < 4 || sizes[2] !== sizes[3])) {
+                targetSize = sizes[0] === 'BIG' ? 'SMALL' : 'BIG'; // 2/2 में 2 आने के बाद अगला स्विच
+                activeEngineName = `Strict 2/2 Pattern Switch (${targetSize})`;
+            }
+            // ⚡ 2. STRICT ZIG-ZAG ALTERNATE PATTERN (1/1)
+            else if (sizes[0] !== sizes[1] && sizes[1] !== sizes[2] && sizes[2] !== sizes[3]) {
+                targetSize = sizes[0] === 'BIG' ? 'SMALL' : 'BIG';
+                activeEngineName = 'Strict Zig-Zag Alternate';
+            }
+            // ⚡ 3. STRICT 2/1 FORMULA
+            else if (sizes.length >= 3 && sizes[0] !== sizes[1] && sizes[1] === sizes[2]) {
+                targetSize = sizes[1];
+                activeEngineName = `Strict 2/1 Formula Match (${sizes[1]})`;
+            }
+            // ⚡ 4. STRICT 3/1 FORMULA
+            else if (sizes.length >= 4 && sizes[0] !== sizes[1] && sizes[1] === sizes[2] && sizes[2] === sizes[3]) {
+                targetSize = sizes[1];
+                activeEngineName = `Strict 3/1 Formula Match (${sizes[1]})`;
+            }
+            // ⚡ 5. TRUE DRAGON FLOW (4 या अधिक बार लगातार)
+            else if (sizes[0] === sizes[1] && sizes[1] === sizes[2] && sizes[2] === sizes[3]) {
+                targetSize = sizes[0];
+                activeEngineName = `True Dragon Flow (${sizes[0]})`;
+            }
+            // ⚡ 6. DEFAULT TREND FOLLOWER
+            else {
+                targetSize = sizes[0];
+                activeEngineName = 'Balanced Trend Follower';
+            }
+
+            // एडवांस मल्टी-हिस्ट्री वेटेज नंबर जनरेशन
+            let digitWeights = Array(10).fill(0);
+            historyList.slice(0, 15).forEach((r, idx) => {
+                if (!isNaN(r.number)) {
+                    let weight = 15 - idx;
+                    digitWeights[r.number] += weight;
+                }
+            });
+
+            let pool = targetSize === 'SMALL' ? [0, 1, 2, 3, 4] : [5, 6, 7, 8, 9];
+            pool.sort((a, b) => {
+                if (digitWeights[b] !== digitWeights[a]) {
+                    return digitWeights[b] - digitWeights[a];
+                }
+                return Math.random() - 0.5;
+            });
+
+            let goldenPair = `${pool[0]} ${pool[1]}`;
+            return { size: targetSize, numbers: goldenPair, level: level, activeEngine: activeEngineName };
+        }
+
+        function parseApiResponse(json, sourceType) {
+            try {
+                let list = [];
+                if (Array.isArray(json)) {
+                    list = json;
+                } else if (json.data && Array.isArray(json.data)) {
+                    list = json.data;
+                } else if (json.data && json.data.list && Array.isArray(json.data.list)) {
+                    list = json.data.list;
+                } else if (json.list && Array.isArray(json.list)) {
+                    list = json.list;
+                } else if (json.data && json.data.data && Array.isArray(json.data.data)) {
+                    list = json.data.data;
+                }
+
+                if(list.length === 0) return;
+
+                list.sort((a, b) => {
+                    let idA = String(a.issueNumber || a.issue || a.period || a.gameNo || a.item?.issueNumber || '');
+                    let idB = String(b.issueNumber || b.issue || b.period || b.gameNo || b.item?.issueNumber || '');
+                    return idA.localeCompare(idB, undefined, {numeric: true});
+                });
+
+                let updated = false;
+                let latestEventStatus = null;
+                let latestItemResult = null;
+
+                list.forEach(item => {
+                    const issueId = String(item.issueNumber || item.issue || item.period || item.gameNo || item.item?.issueNumber || '');
+                    const rawNum = item.number !== undefined ? item.number : 
+                                  (item.winningNumber !== undefined ? item.winningNumber : 
+                                  (item.point !== undefined ? item.point : 
+                                  (item.result !== undefined ? item.result : '')));
+
+                    const num = parseInt(rawNum);
+
+                    if(issueId && !isNaN(num)) {
+                        const uniqueId = `API_${sourceType}_${issueId}`;
+                        if (clearedPeriodIds.has(uniqueId)) return;
+
+                        const exists = records.some(r => r.id === uniqueId);
+                        if(!exists) {
+                            const actualSize = num >= 5 ? 'BIG' : 'SMALL';
+                            let pred = calculateAdvancedZeroLossPrediction(records);
+
+                            let matchType = 'LOSS';
+                            if (pred.size === 'WAIT') {
+                                matchType = 'SKIPPED';
+                            } else {
+                                let cleanPredNumbers = pred.numbers.replace(/\s+/g, '');
+                                if (cleanPredNumbers.includes(String(num))) {
+                                    matchType = 'JACKPOT';
+                                } else if (pred.size === actualSize) {
+                                    matchType = 'WIN';
+                                }
+                            }
+
+                            const newRec = {
+                                id: uniqueId,
+                                issueId: issueId,
+                                number: num,
+                                size: actualSize,
+                                predSize: pred.size,
+                                predNumbers: pred.numbers,
+                                level: pred.level,
+                                matchStatus: matchType,
+                                source: `API (${sourceType})`,
+                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                            };
+
+                            records.unshift(newRec);
+                            updated = true;
+                            latestEventStatus = matchType;
+                            latestItemResult = newRec;
+                        }
+                    }
+                });
+
+                if(updated) {
+                    if(records.length > 100) records = records.slice(0, 100);
+                    saveAndRefresh();
+
+                    if(telegramBroadcastActive && latestItemResult && latestEventStatus !== 'SKIPPED') {
+                        let resultMsg = '';
+
+                        if (latestEventStatus === 'JACKPOT') {
+                            resultMsg = `👑🔥 𝗝𝗔𝗖𝗞𝗣𝗢𝗧 𝗪𝗜𝗡𝗡𝗘𝗥! 🔥👑\n` +
+                                        `🏆🏆🏆🏆🏆🏆🏆🏆🏆🏆🏆🏆\n` +
+                                        `🎉 𝗦𝘁𝗮𝘁𝘂𝘀: 🎯 𝟭𝟬𝟬% 𝗝𝗔𝗖𝗞𝗣𝗢𝗧 𝗪𝗜𝗡! 💎\n` +
+                                        `🔥 𝗖𝗼𝗻𝗴𝗿𝗮𝘁𝘂𝗹𝗮𝘁𝗶𝗼𝗻𝘀 𝗧𝗼 𝗔𝗹𝗹 𝗩𝗜𝗣 𝗠𝗲𝗺𝗯𝗲𝗿𝘀! 🎉\n\n` +
+                                        `📢 Channel: @VIPGUPTAA`;
+                        } else if (latestEventStatus === 'WIN') {
+                            resultMsg = `🎉🔥 𝗪𝗜𝗡𝗡𝗘𝗥 𝗨𝗣𝗗𝗔𝗧𝗘 🎯🔥\n` +
+                                        `✨✨✨✨✨✨✨✨✨✨✨✨\n` +
+                                        `✅ 𝗦𝘁𝗮𝘁𝘂𝘀: 🏆 𝗦𝗨𝗖𝗖𝗘𝗦𝗦𝗙𝗨𝗟 𝗪𝗜𝗡! 🎉\n` +
+                                        `💵 𝗣𝗿𝗼𝗳𝗶𝘁 𝗕𝗼𝗼𝗸𝗲𝗱! 🚀\n\n` +
+                                        `📢 Channel: @VIPGUPTAA`;
+                        } else {
+                            resultMsg = `❌ 𝗥𝗘𝗦𝗨𝗟𝗧 𝗨𝗣𝗗𝗔𝗧𝗘 ❌\n\n` +
+                                        `❌ Status: LOSS\n\n` +
+                                        `📢 Channel: @VIPGUPTAA`;
+                        }
+
+                        sendTelegramMessage(resultMsg);
+                    }
+
+                    if(latestEventStatus === 'JACKPOT') {
+                        currentLossLevel = 0; 
+                        speakText("Jackpot Winning");
+                    } else if(latestEventStatus === 'WIN') {
+                        currentLossLevel = 0; 
+                        speakText("Winning");
+                    } else if(latestEventStatus === 'LOSS') {
+                        currentLossLevel = Math.min(currentLossLevel + 1, 6); 
+                        speakText("Loss");
+                    }
+                }
+            } catch (e) {
+                console.error("Error parsing API JSON structure:", e);
+            }
+        }
+
+        function saveAndRefresh() {
+            localStorage.setItem('wingo_simple_records', JSON.stringify(records));
+            renderHistoryTable();
+            updatePredictionAndTimer();
+            updateCounters();
+        }
+
+        function updateCounters() {
+            let totalWins = 0;
+            let totalJackpots = 0;
+            let totalLosses = 0;
+
+            records.forEach(r => {
+                if(r.matchStatus === 'WIN') totalWins++;
+                else if(r.matchStatus === 'JACKPOT') totalJackpots++;
+                else if(r.matchStatus === 'LOSS') totalLosses++;
+            });
+
+            let totalSuccess = totalWins + totalJackpots;
+            let totalGames = totalSuccess + totalLosses;
+            let accuracy = totalGames > 0 ? Math.round((totalSuccess / totalGames) * 100) : 0;
+
+            document.getElementById('count-wins').innerText = totalWins;
+            document.getElementById('count-jackpots').innerText = totalJackpots;
+            document.getElementById('count-losses').innerText = totalLosses;
+            document.getElementById('count-accuracy').innerText = accuracy + '%';
+        }
+
+        function updatePredictionAndTimer() {
+            const displayEl = document.getElementById('next-call-display');
+            const periodTextEl = document.getElementById('live-period-text');
+            const botAvatar = document.getElementById('bot-character-avatar');
+            const signalStatusEl = document.getElementById('live-signal-status');
+            const currentTrendEl = document.getElementById('live-current-trend');
+            
+            if(records.length === 0) {
+                displayEl.innerHTML = `<span class="text-slate-400 text-sm font-medium">डेटा सिंक किया जा रहा है...</span>`;
+                periodTextEl.innerText = `वर्तमान पीरियड: --`;
+                signalStatusEl.innerHTML = `<i class="fa-solid fa-satellite-dish animate-pulse mr-1"></i> Waiting for Data`;
+                currentTrendEl.innerHTML = `<i class="fa-solid fa-layer-group mr-1"></i> Scanning All Patterns...`;
+                return;
+            }
+
+            const latestIssue = records[0].issueId;
+            let nextIssue = "--";
+            try {
+                let lastNumId = BigInt(latestIssue);
+                nextIssue = (lastNumId + 1n).toString();
+            } catch(e) {
+                nextIssue = latestIssue + "_next";
+            }
+
+            periodTextEl.innerText = `अगला लाइव पीरियड: ${nextIssue}`;
+            const pred = calculateAdvancedZeroLossPrediction(records);
+
+            if (pred.size === 'WAIT') {
+                signalStatusEl.className = "font-extrabold text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40";
+                signalStatusEl.innerHTML = `<i class="fa-solid fa-hand mr-1 text-amber-400"></i> AUTO-SKIP`;
+                currentTrendEl.className = "font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30";
+                currentTrendEl.innerHTML = `<i class="fa-solid fa-shield mr-1"></i> ${pred.activeEngine}`;
+
+                botAvatar.className = "fa-solid fa-bolt text-2xl sm:text-3xl text-amber-400 bot-character-icon";
+                displayEl.innerHTML = `
+                    <div class="bg-amber-500/15 border border-amber-500/40 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-lg">
+                        <span class="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded text-xs">WAIT / SKIP</span>
+                        <span class="text-amber-300 text-sm font-bold">साफ़ पैटर्न का इंतज़ार करें</span>
+                    </div>`;
+            } else {
+                signalStatusEl.className = "font-extrabold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/40";
+                signalStatusEl.innerHTML = `<i class="fa-solid fa-layer-group mr-1 text-emerald-400"></i> PATTERN SIGNAL CAPTURED`;
+                currentTrendEl.className = "font-bold text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20";
+                currentTrendEl.innerHTML = `<i class="fa-solid fa-layer-group mr-1"></i> ${pred.activeEngine}`;
+
+                if(pred.size === 'BIG') {
+                    botAvatar.className = "fa-solid fa-layer-group text-2xl sm:text-3xl text-emerald-400 bot-character-icon";
+                    displayEl.innerHTML = `
+                        <div class="bg-emerald-500/15 border border-emerald-500/40 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-lg">
+                            <span class="bg-emerald-500 text-slate-950 font-black px-2 py-0.5 rounded text-xs">BIG</span>
+                            <span class="text-emerald-300 text-sm font-bold">लेवल-${pred.level}</span>
+                            <span class="text-amber-300 font-extrabold text-sm border-l border-emerald-500/30 pl-2">नंबर: ${pred.numbers}</span>
+                        </div>`;
+                } else {
+                    botAvatar.className = "fa-solid fa-layer-group text-2xl sm:text-3xl text-teal-400 bot-character-icon";
+                    displayEl.innerHTML = `
+                        <div class="bg-teal-500/15 border border-teal-500/40 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-lg">
+                            <span class="bg-teal-500 text-slate-950 font-black px-2 py-0.5 rounded text-xs">SMALL</span>
+                            <span class="text-teal-300 text-sm font-bold">लेवल-${pred.level}</span>
+                            <span class="text-amber-300 font-extrabold text-sm border-l border-teal-500/30 pl-2">नंबर: ${pred.numbers}</span>
+                        </div>`;
+                }
+            }
+
+            if (telegramBroadcastActive && nextIssue !== lastBroadcastedPeriod && pred.size !== 'WAIT') {
+                lastBroadcastedPeriod = nextIssue;
+                setTimeout(() => {
+                    let lossTextPrefix = currentLossLevel > 0 ? `⚠️ ${currentLossLevel} LEVEL LOSS\n\n` : '';
+                    const signalMsg = `${lossTextPrefix}📊 𝗡𝗘𝗪 𝗦𝗜𝗚𝗡𝗔𝗟 (𝗠𝗨𝗟𝗧𝗜-𝗣𝗔𝗧𝗧𝗘𝗥𝗡 𝗩𝟭𝟴.𝟴)\n\n` +
+                                     `🔹 Period: ${nextIssue}\n` +
+                                     `🔮 Prediction: ${pred.size}\n` +
+                                     `💎 Golden Pair: ${pred.numbers}\n` +
+                                     `📊 Level: ${pred.level}\n\n` +
+                                     `📢 Channel: @VIPGUPTAA`;
+
+                    sendTelegramMessage(signalMsg);
+                }, 3000);
+            }
+
+            startRealtimeCountdown();
+        }
+
+        function startRealtimeCountdown() {
+            if(timerInterval) clearInterval(timerInterval);
+            
+            const selectedType = document.getElementById('api-selector').value;
+            let duration = selectedType === '30S' ? 30 : 60;
+            
+            let timeLeft = duration - (Math.floor(Date.now() / 1000) % duration);
+            const timerEl = document.getElementById('countdown-timer');
+
+            function updateTimerDisplay() {
+                let m = Math.floor(timeLeft / 60);
+                let s = timeLeft % 60;
+                timerEl.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                
+                if(timeLeft <= 0) {
+                    timeLeft = duration;
+                    if(autoSyncActive) {
+                        fetchApiData();
+                    }
+                }
+                timeLeft--;
+            }
+
+            updateTimerDisplay();
+            timerInterval = setInterval(updateTimerDisplay, 1000);
+        }
+
+        function renderHistoryTable() {
+            const tbody = document.getElementById('history-table-body');
+            const noRecordsEl = document.getElementById('no-records');
+            tbody.innerHTML = '';
+
+            if(records.length === 0) {
+                noRecordsEl.classList.remove('hidden');
+                return;
+            } else {
+                noRecordsEl.classList.add('hidden');
+            }
+
+            records.forEach((r) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition border-b border-slate-800/40";
+                
+                let actualBadge = r.size === 'BIG' 
+                    ? `<span class="font-bold text-emerald-400">BIG (${r.number})</span>` 
+                    : `<span class="font-bold text-teal-400">SMALL (${r.number})</span>`;
+
+                let matchBadge = '';
+                if(r.matchStatus === 'JACKPOT') {
+                    matchBadge = `
+                        <span class="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/50 px-2.5 py-1 rounded-lg text-xs font-black tracking-wide shadow-md animate-pulse">
+                            <i class="fa-solid fa-crown text-amber-400"></i> JACKPOT! (L-${r.level} ${r.predSize} [${r.predNumbers}])
+                        </span>`;
+                } else if(r.matchStatus === 'WIN') {
+                    matchBadge = `
+                        <span class="inline-flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-lg text-xs font-extrabold tracking-wide">
+                            WIN (L-${r.level} ${r.predSize} [${r.predNumbers}])
+                        </span>`;
+                } else if(r.matchStatus === 'SKIPPED') {
+                    matchBadge = `
+                        <span class="inline-flex items-center gap-1.5 bg-slate-700/50 text-amber-300 border border-emerald-500/30 px-2.5 py-1 rounded-lg text-xs font-bold">
+                            <i class="fa-solid fa-hand text-amber-400"></i> SKIPPED (UNCLEAR CHART)
+                        </span>`;
+                } else {
+                    matchBadge = `
+                        <span class="inline-flex items-center gap-1.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2.5 py-1 rounded-lg text-xs font-extrabold tracking-wide">
+                            LOSS (L-${r.level} ${r.predSize} [${r.predNumbers}])
+                        </span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="p-3 font-mono font-medium text-slate-200">${r.issueId}</td>
+                    <td class="p-3 text-center font-extrabold text-base text-slate-100">${r.number}</td>
+                    <td class="p-3">${actualBadge}</td>
+                    <td class="p-3">${matchBadge}</td>
+                    <td class="p-3 text-slate-400 text-xs">${r.time}</td>
+                    <td class="p-3 text-center">
+                        <button type="button" onclick="deleteRecord('${r.id}')" class="text-rose-400 hover:text-rose-300 p-1.5 transition text-sm cursor-pointer" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteRecord(id) {
+            if(confirm('क्या आप वाकई इस रिकॉर्ड को हटाना चाहते हैं?')) {
+                clearedPeriodIds.add(id);
+                records = records.filter(r => r.id !== id);
+                saveAndRefresh();
+            }
+        }
+
+        function clearHistory() {
+            if(confirm('चेतावनी: सभी सहेजे गए रिकॉर्ड और काउंट पूरी तरह डिलीट हो जाएंगे। क्या आप सुनिश्चित हैं?')) {
+                records.forEach(r => clearedPeriodIds.add(r.id));
+                records = [];
+                currentLossLevel = 0; 
+                lastBroadcastedPeriod = null; 
+                localStorage.removeItem('wingo_simple_records');
+                
+                document.getElementById('count-wins').innerText = '0';
+                document.getElementById('count-jackpots').innerText = '0';
+                document.getElementById('count-losses').innerText = '0';
+                document.getElementById('count-accuracy').innerText = '0%';
+
+                renderHistoryTable();
+                document.getElementById('next-call-display').innerHTML = `<span>सिंक शुरू करने के लिए 'Sync' दबाएं...</span>`;
+                document.getElementById('live-period-text').innerText = `वर्तमान पीरियड: --`;
+            }
+        }
+    </script>
+</body>
+</html>
